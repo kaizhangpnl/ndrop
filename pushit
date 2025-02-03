@@ -1,0 +1,28 @@
+#!/bin/csh 
+
+git pull 
+git add *
+
+git commit -m "update" 
+
+git push origin main
+
+echo " " 
+echo " " 
+echo " " 
+echo " " 
+echo " " 
+echo " " 
+echo " " 
+echo " " 
+echo " " 
+echo " " 
+echo "................................." 
+echo " Well done " 
+echo "................................." 
+echo " " 
+echo " " 
+echo " " 
+echo " " 
+
+
