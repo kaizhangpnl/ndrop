@@ -1052,7 +1052,7 @@ contains
        call explmix(  qcld, &   ! out
             srcn, ekkp, ekkm, overlapp,  &   ! in
             overlapm, qncld,  &  ! in
-            dtmix, .false. )     ! in
+            dtmix, .false., .false. )     ! in
 
        ! update aerosol number
 
@@ -1077,12 +1077,12 @@ contains
           call explmix( raercol_cw(:,mm,nnew), &  ! out
                source, ekkp, ekkm, overlapp, &   ! in
                overlapm, raercol_cw(:,mm,nsav),   &  ! in
-               dtmix, .false. ) ! in
+               dtmix, .false., .true. ) ! in
 
           call explmix( raercol(:,mm,nnew), &   ! out
                source, ekkp, ekkm, overlapp,  &    ! in
                overlapm, raercol(:,mm,nsav),  &  ! in
-               dtmix, .true., &  ! in
+               dtmix, .true., .false., &  ! in
                raercol_cw(:,mm,nsav))  ! optional in
 
           ! update aerosol species mass
@@ -1101,12 +1101,12 @@ contains
              call explmix( raercol_cw(:,mm,nnew), &  ! out
                   source, ekkp, ekkm, overlapp, &  ! in
                   overlapm, raercol_cw(:,mm,nsav),    &  ! in
-                  dtmix, .false. ) ! in
+                  dtmix, .false., .true. ) ! in
 
              call explmix( raercol(:,mm,nnew), &  ! out
                   source, ekkp, ekkm, overlapp,  &  ! in
                   overlapm, raercol(:,mm,nsav),  &   ! in
-                  dtmix, .true., & ! in
+                  dtmix, .true., .false., & ! in
                   raercol_cw(:,mm,nsav))  ! optional in
 
           enddo  ! lspec loop
@@ -1141,7 +1141,7 @@ contains
   !===============================================================================
 
   subroutine explmix( qnew, &  ! out
-       src, ekkp, ekkm, overlapp, overlapm, qold, dtmix, is_unact, &  ! in
+       src, ekkp, ekkm, overlapp, overlapm, qold, dtmix, is_unact, is_mixing, &  ! in
        qactold )  ! optional in
 
     !  explicit integration of droplet/aerosol mixing
@@ -1161,6 +1161,7 @@ contains
     real(r8), intent(in) :: overlapm(pver) ! cloud overlap above [fraction]
     real(r8), intent(in) :: dtmix ! time step [s]
     logical, intent(in) :: is_unact ! true if this is an unactivated species
+    logical, intent(in) :: is_mixing ! true if this is an unactivated species
     real(r8), intent(in),optional :: qactold(pver) ! [# or kg / kg]
     ! number / mass mixing ratio of ACTIVATED species from previous step
     ! *** this should only be present
@@ -1180,13 +1181,22 @@ contains
        km1=max(kk-1,top_lev)
 
        if ( is_unact ) then
-          qnew(kk) = qold(kk) + dtmix*( - src(kk) + ekkp(kk)*(qold(kp1) - qold(kk) +       &
-               qactold(kp1)*(1.0_r8-overlapp(kk)))               &
-               + ekkm(kk)*(qold(km1) - qold(kk) +     &
-               qactold(km1)*(1.0_r8-overlapm(kk))) )
+          if( is_mixing ) then
+             qnew(kk) = qold(kk) + dtmix*( - src(kk) + ekkp(kk)*(qold(kp1) - qold(kk) +       &
+                  qactold(kp1)*(1.0_r8-overlapp(kk)))               &
+                  + ekkm(kk)*(qold(km1) - qold(kk) +     &
+                  qactold(km1)*(1.0_r8-overlapm(kk))) )
+          else
+             qnew(kk) = qold(kk) + dtmix*( - src(kk) + ekkp(kk)*(qactold(kp1)*(1.0_r8-overlapp(kk)))               &
+                  + ekkm(kk)*(qactold(km1)*(1.0_r8-overlapm(kk))) )
+          endif
        else
-          qnew(kk) = qold(kk) + dtmix*(src(kk) + ekkp(kk)*(overlapp(kk)*qold(kp1)-qold(kk)) +      &
-               ekkm(kk)*(overlapm(kk)*qold(km1)-qold(kk)) )
+          if( is_mixing ) then
+             qnew(kk) = qold(kk) + dtmix*(src(kk) + ekkp(kk)*(overlapp(kk)*qold(kp1)-qold(kk)) +      &
+                  ekkm(kk)*(overlapm(kk)*qold(km1)-qold(kk)) )
+          else
+             qnew(kk) = qold(kk) + dtmix*src(kk)
+          endif
        endif
 
        !        force to non-negative
